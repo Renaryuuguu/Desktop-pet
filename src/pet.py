@@ -15,7 +15,7 @@ import random
 
 class DesktopPet:
     def __init__(self):
-        self.screen = pygame.display.set_mode((1000, 1000), pygame.NOFRAME)
+        self.screen = pygame.display.set_mode((1000, 1000), pygame.NOFRAME | pygame.SRCALPHA)
         pygame.init()
         pygame.display.set_caption("Desktop Pet")
 
@@ -66,7 +66,7 @@ def pet_run():
                     context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)  # 顯示菜單
 
             # 检测鼠标拖拽事件
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # 左键按下
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # 中键按下
                 mouse_pos = event.pos
                 # 计算宠物图片的位置
                 pet_rect = pygame.Rect(
@@ -94,7 +94,7 @@ def pet_run():
                         win32con.SWP_NOSIZE | win32con.SWP_NOZORDER
                     )
 
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:  # 左键释放
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 2:  # 中键释放
                 # 如果当前状态是拖拽，则结束拖拽
                 if state_manager.status == PetStatus.DRAGGING:
                     state_manager.set_status(PetStatus.STANDING)
@@ -203,8 +203,10 @@ def pet_run():
         else:
             frames = []  # 如果有其他狀態，需處理對應的幀序列
 
+
+        is_dragging = state_manager.status == PetStatus.DRAGGING
         # 播放動畫
-        animation.play_frame(frames, frame_index)
+        animation.play_frame(frames, frame_index, is_dragging)
 
         # 更新帧索引
         if pet.status in [PetStatus.STANDING, PetStatus.DRAGGING]:  # 循環播放 STANDING 和 DRAGGING 動畫
