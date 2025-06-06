@@ -1,6 +1,10 @@
-from src.utils.load_images_from_folder import load_images_from_folder
 from src.entity.pet_status import PetStatus
+from src.entity.menu import get_menu_items, get_status_menu_items
+from src.utils.load_images_from_folder import load_images_from_folder
 from src.utils.contextmenu import ContextMenu
+from src.utils.state_manager import StateManager
+from src.utils.animation import Animation
+from src.utils.window_manager import WindowManager
 
 import pygame
 import os
@@ -13,25 +17,13 @@ import random
 class DesktopPet:
     def __init__(self):
         self.screen = pygame.display.set_mode((1000, 1000), pygame.NOFRAME)
-
         pygame.init()
-        
         pygame.display.set_caption("Desktop Pet")
-        
-        # 设置窗口透明
-        self.transparent()
-        # 设置窗口置顶
-        hwnd = pygame.display.get_wm_info()["window"]
-        win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                              win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
-    # 设置透明
-    def transparent(self):
-        hwnd = pygame.display.get_wm_info()["window"]
-        styles = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, styles | win32con.WS_EX_LAYERED)
 
-        win32gui.SetLayeredWindowAttributes(hwnd, 0x000000, 0, win32con.LWA_COLORKEY)
-    
+        hwnd = pygame.display.get_wm_info()["window"]
+        WindowManager.set_transparent(hwnd)
+        WindowManager.set_topmost(hwnd)
+        
     def update(self):
         self.screen.fill((0, 0, 0, 0))
         self.screen.blit(self.image, (0, 0))
@@ -40,32 +32,17 @@ class DesktopPet:
 
 def pet_run():
     pet = DesktopPet()
+    animation = Animation(pet.screen)
+    state_manager = StateManager()
     running = True
 
-    # 分别加载两种状态的帧
     standing_frames = load_images_from_folder(r'assets\pet\image\Standing')
     idle_frames = load_images_from_folder(r'assets\pet\image\Idle')
 
     frame_index = 0
     clock = pygame.time.Clock()
 
-    # 状态切换相关
-    pet.status = PetStatus.STANDING
-    next_idle_time = pygame.time.get_ticks() + random.randint(30000, 50000)  # 30-50秒后切idle
-
-    is_topmost = True  # 初始为置顶
-
-    def get_menu_items():
-        return [
-            {'text': '退出', 'action': 'quit'},
-            {'text': '取消置顶' if is_topmost else '置顶', 'action': 'toggle_topmost'},
-            {'text': '切换状态', 'action': 'switch_status_menu'},
-        ]
-    def get_status_menu_items():
-        return [
-            {'text': '站立', 'action': 'set_standing'},
-            {'text': '闲置', 'action': 'set_idle'},
-        ]
+    is_topmost = True
     context_menu = None
     status_menu = None
 
@@ -74,15 +51,26 @@ def pet_run():
             # 右键菜单显示/隐藏
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 mouse_pos = pygame.mouse.get_pos()
-                frame = standing_frames[frame_index]
-                img_x = pet.screen.get_width() // 2 - frame.get_width() // 2
-                img_y = pet.screen.get_height() // 2 - frame.get_height() // 2
-                img_rect = pygame.Rect(img_x, img_y, frame.get_width(), frame.get_height())
-                if img_rect.collidepoint(mouse_pos):
-                    if context_menu and context_menu.visible:
-                        context_menu.visible = False
-                    else:
-                        context_menu = ContextMenu(pet.screen, get_menu_items(), mouse_pos)
+
+                # 根據當前狀態選擇正確的帧序列
+                if pet.status == PetStatus.STANDING:
+                    frames = standing_frames
+                elif pet.status == PetStatus.IDLE:
+                    frames = idle_frames
+                else:
+                    frames = []  # 如果有其他狀態，需處理對應的帧序列
+
+                # 确保 frame_index 不超出范围
+                if frames:
+                    frame = frames[frame_index % len(frames)]
+                    img_x = pet.screen.get_width() // 2 - frame.get_width() // 2
+                    img_y = pet.screen.get_height() // 2 - frame.get_height() // 2
+                    img_rect = pygame.Rect(img_x, img_y, frame.get_width(), frame.get_height())
+                    if img_rect.collidepoint(mouse_pos):
+                        if context_menu and context_menu.visible:
+                            context_menu.visible = False
+                        else:
+                            context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)
                 continue
 
             # 主菜单事件
@@ -113,12 +101,14 @@ def pet_run():
             if status_menu and status_menu.visible:
                 result = status_menu.handle_event(event)
                 if result == 'set_standing':
-                    pet.status = PetStatus.STANDING
+                    state_manager.set_status(PetStatus.STANDING)  # 更新状态
+                    state_manager.reset_idle_timer()  # 重置定时器
                     frame_index = 0
                     status_menu = None
                     context_menu = None
                 elif result == 'set_idle':
-                    pet.status = PetStatus.IDLE
+                    state_manager.set_status(PetStatus.IDLE)  # 更新状态
+                    state_manager.reset_idle_timer()  # 重置定时器
                     frame_index = 0
                     status_menu = None
                     context_menu = None
@@ -154,33 +144,30 @@ def pet_run():
                         status_menu.visible = False
 
         # 状态定时切换
-        now = pygame.time.get_ticks()
-        if pet.status == PetStatus.STANDING and now >= next_idle_time:
-            pet.status = PetStatus.IDLE
-            frame_index = 0  # 切换到idle时从第一帧开始
+        pet.status = state_manager.update_status()
 
         # 根据状态选择帧序列
         if pet.status == PetStatus.STANDING:
             frames = standing_frames
-        else:
+        elif pet.status == PetStatus.IDLE:
             frames = idle_frames
+        else:
+            # 未來可以加入其他狀態的帧序列
+            frames = []
 
         # 播放动画
-        pet.screen.fill((0, 0, 0))
-        frame = frames[frame_index % len(frames)]
-        pet.screen.blit(frame, (pet.screen.get_width() // 2 - frame.get_width() // 2,
-                                pet.screen.get_height() // 2 - frame.get_height() // 2))
+        animation.play_frame(frames, frame_index)
 
-        # 检查idle动画是否播放完一轮
-        if pet.status == PetStatus.IDLE:
+        # 更新帧索引
+        if pet.status != PetStatus.STANDING:  # 非 STANDING 狀態
             frame_index += 1
-            if frame_index >= len(idle_frames):
-                pet.status = PetStatus.STANDING
-                frame_index = 0
-                next_idle_time = pygame.time.get_ticks() + random.randint(30000, 50000)
+            if frame_index >= len(frames):  # 如果當前狀態的動畫播放完一輪
+                state_manager.status_complete = True  # 標記為完成
+                frame_index = 0  # 重置帧索引
         else:
-            frame_index = (frame_index + 1) % len(frames)
+            frame_index = (frame_index + 1) % len(frames)  # 循環播放 STANDING 動畫
 
+        # 繪製菜單（保持原樣）
         if context_menu and context_menu.visible:
             context_menu.draw()
         if status_menu and status_menu.visible:
