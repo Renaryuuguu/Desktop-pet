@@ -11,3 +11,9 @@ class WindowManager:
     @staticmethod
     def set_topmost(hwnd, topmost=True):
         flag = win32con.HWND_TOPMOST if topmost else win32con.HWND_NOTOPMOST
+        # Apply the topmost setting
+        win32gui.SetWindowPos(
+            hwnd, flag, 
+            0, 0, 0, 0, 
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+        )

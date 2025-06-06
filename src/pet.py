@@ -47,6 +47,11 @@ def pet_run():
     context_menu = None
     status_menu = None
 
+    # 添加偏移量变量
+    offset_x = 0
+    offset_y = 0
+    dragging = False
+
     while running:
         for event in pygame.event.get():
             # 右键菜单显示/隐藏
@@ -58,26 +63,55 @@ def pet_run():
                     context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)  # 顯示菜單
 
             # 检测鼠标拖拽事件
+            # 在 MOUSEBUTTONDOWN 中记录偏移量
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # 左键按下
-                mouse_pos = pygame.mouse.get_pos()
+                mouse_pos = event.pos
+                # 计算宠物图片的位置
                 pet_rect = pygame.Rect(
                     pet.screen.get_width() // 2 - standing_frames[0].get_width() // 2,
                     pet.screen.get_height() // 2 - standing_frames[0].get_height() // 2,
                     standing_frames[0].get_width(),
                     standing_frames[0].get_height(),
                 )
+                
                 if pet_rect.collidepoint(mouse_pos):
-                    state_manager.set_status(PetStatus.DRAGGING)  # 切换到 DRAGGING 状态
+                    state_manager.set_status(PetStatus.DRAGGING)
+                    dragging = True  # 设置拖拽标志
+                    
+                    # 获取窗口当前位置
+                    hwnd = pygame.display.get_wm_info()["window"]
+                    window_rect = win32gui.GetWindowRect(hwnd)
+                    
+                    # 计算鼠标在窗口内的位置
+                    offset_x = mouse_pos[0]
+                    offset_y = mouse_pos[1]
 
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:  # 左鍵釋放
-                if state_manager.status == PetStatus.DRAGGING:
-                    state_manager.set_status(PetStatus.STANDING)  # 切換回 STANDING 狀態
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:  # 左键释放
+                if dragging:  # 确保只处理拖拽结束
+                    state_manager.set_status(PetStatus.STANDING)
+                    dragging = False  # 清除拖拽标志
 
-            elif event.type == pygame.MOUSEMOTION and pet.status == PetStatus.DRAGGING:  # 拖拽中
-                pet_x, pet_y = event.pos
+            elif event.type == pygame.MOUSEMOTION and dragging:  # 拖拽中
+                mouse_pos = event.pos
                 hwnd = pygame.display.get_wm_info()["window"]
-                win32gui.SetWindowPos(hwnd, None, pet_x - standing_frames[0].get_width() // 2, pet_y - standing_frames[0].get_height() // 2, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOZORDER)
-                continue
+                
+                # 获取当前鼠标的屏幕坐标
+                current_screen_pos = win32gui.GetCursorPos()
+                
+                # 计算新的窗口位置（直接使用鼠标屏幕坐标减去偏移量）
+                new_x = current_screen_pos[0] - offset_x
+                new_y = current_screen_pos[1] - offset_y
+                
+                # 移动窗口
+                win32gui.SetWindowPos(
+                    hwnd, None, 
+                    new_x, new_y, 
+                    0, 0, 
+                    win32con.SWP_NOSIZE | win32con.SWP_NOZORDER
+                )
+                # 更新宠物位置
+                pet_position = [new_x, new_y]
+                continue  # 跳过后续事件处理
 
             # 主菜单事件
             if context_menu and context_menu.visible:
