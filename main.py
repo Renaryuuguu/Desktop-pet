@@ -1,3 +1,4 @@
+from src.pet import pet_run
 import pygame
 # from src.pet import DesktopPet
 
@@ -16,4 +17,4 @@ def main():
     #     pygame.time.delay(30)
 
 if __name__ == "__main__":
-    main()
+    pet_run()
