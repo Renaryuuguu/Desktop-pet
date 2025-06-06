@@ -10,12 +10,11 @@ class StateManager:
 
     def update_status(self):
         now = pygame.time.get_ticks()
-        if self.status == PetStatus.STANDING and now >= self.next_idle_time:
+        if self.status == PetStatus.STANDING and self.next_idle_time is not None and now >= self.next_idle_time:
             self.status = PetStatus.IDLE
             self.status_complete = False  # 重置為未完成
             self.next_idle_time = None  # 清除定時器
         elif self.status != PetStatus.STANDING and self.status_complete:
-            # 當非 STANDING 狀態完成後切換回 STANDING
             self.status = PetStatus.STANDING
             self.reset_idle_timer()  # 重置定時器
         return self.status

@@ -10,7 +10,6 @@ import pygame
 import os
 import win32gui
 import win32con
-import win32api
 import random
 
 
@@ -23,6 +22,7 @@ class DesktopPet:
         hwnd = pygame.display.get_wm_info()["window"]
         WindowManager.set_transparent(hwnd)
         WindowManager.set_topmost(hwnd)
+        self.status = PetStatus.STANDING
         
     def update(self):
         self.screen.fill((0, 0, 0, 0))
@@ -38,6 +38,7 @@ def pet_run():
 
     standing_frames = load_images_from_folder(r'assets\pet\image\Standing')
     idle_frames = load_images_from_folder(r'assets\pet\image\Idle')
+    dragging_frames = load_images_from_folder(r'assets\pet\image\Dragging')  # 加载 DRAGGING 动画帧
 
     frame_index = 0
     clock = pygame.time.Clock()
@@ -49,28 +50,33 @@ def pet_run():
     while running:
         for event in pygame.event.get():
             # 右键菜单显示/隐藏
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # 右鍵按下
                 mouse_pos = pygame.mouse.get_pos()
-
-                # 根據當前狀態選擇正確的帧序列
-                if pet.status == PetStatus.STANDING:
-                    frames = standing_frames
-                elif pet.status == PetStatus.IDLE:
-                    frames = idle_frames
+                if context_menu and context_menu.visible:
+                    context_menu.visible = False  # 如果菜單已顯示，則隱藏
                 else:
-                    frames = []  # 如果有其他狀態，需處理對應的帧序列
+                    context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)  # 顯示菜單
 
-                # 确保 frame_index 不超出范围
-                if frames:
-                    frame = frames[frame_index % len(frames)]
-                    img_x = pet.screen.get_width() // 2 - frame.get_width() // 2
-                    img_y = pet.screen.get_height() // 2 - frame.get_height() // 2
-                    img_rect = pygame.Rect(img_x, img_y, frame.get_width(), frame.get_height())
-                    if img_rect.collidepoint(mouse_pos):
-                        if context_menu and context_menu.visible:
-                            context_menu.visible = False
-                        else:
-                            context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)
+            # 检测鼠标拖拽事件
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # 左键按下
+                mouse_pos = pygame.mouse.get_pos()
+                pet_rect = pygame.Rect(
+                    pet.screen.get_width() // 2 - standing_frames[0].get_width() // 2,
+                    pet.screen.get_height() // 2 - standing_frames[0].get_height() // 2,
+                    standing_frames[0].get_width(),
+                    standing_frames[0].get_height(),
+                )
+                if pet_rect.collidepoint(mouse_pos):
+                    state_manager.set_status(PetStatus.DRAGGING)  # 切换到 DRAGGING 状态
+
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:  # 左鍵釋放
+                if state_manager.status == PetStatus.DRAGGING:
+                    state_manager.set_status(PetStatus.STANDING)  # 切換回 STANDING 狀態
+
+            elif event.type == pygame.MOUSEMOTION and pet.status == PetStatus.DRAGGING:  # 拖拽中
+                pet_x, pet_y = event.pos
+                hwnd = pygame.display.get_wm_info()["window"]
+                win32gui.SetWindowPos(hwnd, None, pet_x - standing_frames[0].get_width() // 2, pet_y - standing_frames[0].get_height() // 2, 0, 0, win32con.SWP_NOSIZE | win32con.SWP_NOZORDER)
                 continue
 
             # 主菜单事件
@@ -151,21 +157,22 @@ def pet_run():
             frames = standing_frames
         elif pet.status == PetStatus.IDLE:
             frames = idle_frames
+        elif pet.status == PetStatus.DRAGGING:
+            frames = dragging_frames  # 循環播放 DRAGGING 動畫
         else:
-            # 未來可以加入其他狀態的帧序列
-            frames = []
+            frames = []  # 如果有其他狀態，需處理對應的幀序列
 
-        # 播放动画
+        # 播放動畫
         animation.play_frame(frames, frame_index)
 
         # 更新帧索引
-        if pet.status != PetStatus.STANDING:  # 非 STANDING 狀態
+        if pet.status in [PetStatus.STANDING, PetStatus.DRAGGING]:  # 循環播放 STANDING 和 DRAGGING 動畫
+            frame_index = (frame_index + 1) % len(frames)
+        else:
             frame_index += 1
             if frame_index >= len(frames):  # 如果當前狀態的動畫播放完一輪
                 state_manager.status_complete = True  # 標記為完成
-                frame_index = 0  # 重置帧索引
-        else:
-            frame_index = (frame_index + 1) % len(frames)  # 循環播放 STANDING 動畫
+                frame_index = 0  # 重置幀索引
 
         # 繪製菜單（保持原樣）
         if context_menu and context_menu.visible:
