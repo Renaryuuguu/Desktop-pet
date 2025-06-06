@@ -1,7 +1,9 @@
 # pet.py
 import pygame
 import os
-
+import win32gui
+import win32con
+import win32api
 class DesktopPet:
     def __init__(self):
         pygame.init()
@@ -15,6 +17,11 @@ class DesktopPet:
         
         # 设置窗口透明
         self.transparent()
+        hwnd = pygame.display.get_wm_info()["window"]
+        styles = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, styles | win32con.WS_EX_LAYERED)
+
+        win32gui.SetLayeredWindowAttributes(hwnd, 0x000000, 0, win32con.LWA_COLORKEY)
     # 设置透明(不知道为什么没用)
     def transparent(self):
         transparent = (0, 0, 0, 0)
