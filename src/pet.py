@@ -22,6 +22,8 @@ class DesktopPet:
         WindowManager.set_topmost(hwnd)
         WindowManager.set_always_interactive(hwnd)  # 设置窗口始终可交互
         self.status = PetStatus.STANDING
+        self.is_dragging = False
+        self.drag_offset = (0, 0)
 
     def update(self):
         self.screen.fill((0, 0, 0, 0))
@@ -31,21 +33,22 @@ class DesktopPet:
 
 def pet_run():
     pet = DesktopPet()
+    hwnd = pygame.display.get_wm_info()["window"]  # Define hwnd once at the beginning
     animation = Animation(pet.screen)
     state_manager = StateManager()
     running = True
     path = r'assets\pet\image'
     standing_frames = load_images_from_folder(os.path.join(path, PetStatus.STANDING.value))
     idle_frames = load_images_from_folder(os.path.join(path, PetStatus.IDLE.value))
-    dragging_frames = load_images_from_folder(os.path.join(path, PetStatus.DRAGGING.value))  # 加载拖拽动画帧
-    touching_head_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_HEAD.value))  # 加载触摸头部动画帧
-    touching_body_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_BODY.value))  # 加载触摸身体动画帧
+    dragging_frames = load_images_from_folder(os.path.join(path, PetStatus.DRAGGING.value))
+    touching_head_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_HEAD.value))
+    touching_body_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_BODY.value))
     frame_index = 0
     clock = pygame.time.Clock()
 
     # 帧率设置
-    high_fps = 30  # 拖拽时的高帧率
-    normal_fps = 6  # 正常帧率
+    high_fps = 30
+    normal_fps = 6
 
     is_topmost = True
     context_menu = None
@@ -55,6 +58,20 @@ def pet_run():
     offset_x = 0
     offset_y = 0
     while running:
+        # 处理拖拽状态（不依赖事件）
+        if state_manager.status == PetStatus.DRAGGING:
+            # 直接获取鼠标位置（不依赖Pygame事件）
+            current_screen_pos = win32gui.GetCursorPos()
+            new_x = current_screen_pos[0] - offset_x
+            new_y = current_screen_pos[1] - offset_y
+            
+            # 更新窗口位置
+            win32gui.SetWindowPos(
+                hwnd, None,
+                new_x, new_y,
+                0, 0,
+                win32con.SWP_NOSIZE | win32con.SWP_NOZORDER
+            )
         for event in pygame.event.get():
             # 右键菜单显示/隐藏
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
@@ -91,22 +108,19 @@ def pet_run():
                     state_manager.set_status(PetStatus.DRAGGING)
                     offset_x = mouse_pos[0]
                     offset_y = mouse_pos[1]
+                    pet.is_dragging = True
 
                     # 更新位置
-                    current_screen_pos = win32gui.GetCursorPos()
-                    new_x = current_screen_pos[0] - offset_x
-                    new_y = current_screen_pos[1] - offset_y
-                    hwnd = pygame.display.get_wm_info()["window"]
-                    win32gui.SetWindowPos(
-                        hwnd, None,
-                        new_x, new_y,
-                        0, 0,
-                        win32con.SWP_NOSIZE | win32con.SWP_NOZORDER
-                    )
+                    window_pos = win32gui.GetWindowRect(hwnd)
+                    mouse_abs = win32gui.GetCursorPos()
+                    offset_x = mouse_abs[0] - window_pos[0]
+                    offset_y = mouse_abs[1] - window_pos[1]
+            
 
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 2:
                 if state_manager.status == PetStatus.DRAGGING:
                     state_manager.set_status(PetStatus.STANDING)
+                    pet.is_dragging = False 
 
             elif event.type == pygame.MOUSEMOTION:
                 if state_manager.status == PetStatus.DRAGGING:
