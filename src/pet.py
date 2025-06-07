@@ -14,10 +14,11 @@ import random
 
 class DesktopPet:
     def __init__(self):
-        self.screen = pygame.display.set_mode((1000, 1000), pygame.NOFRAME | pygame.SRCALPHA)
+        
         pygame.init()
         pygame.display.set_caption("Desktop Pet")
-
+        # self.screen = pygame.display.set_mode((1000, 1000), pygame.NOFRAME | pygame.SRCALPHA)
+        self.screen = pygame.display.set_mode((500, 500))
         hwnd = pygame.display.get_wm_info()["window"]
         WindowManager.set_transparent(hwnd)
         WindowManager.set_topmost(hwnd)
@@ -34,12 +35,13 @@ def pet_run():
     animation = Animation(pet.screen)
     state_manager = StateManager()
     running = True
-
-    standing_frames = load_images_from_folder(r'assets\pet\image\Standing')
-    idle_frames = load_images_from_folder(r'assets\pet\image\Idle')
-    dragging_frames = load_images_from_folder(r'assets\pet\image\Dragging')  # 加载 DRAGGING 动画帧
-    touches_frames = load_images_from_folder(r'assets\pet\image\Touching')  # 加载 TOUCHES 动画帧
-
+    path = r'assets\pet\image'
+    standing_frames = load_images_from_folder(os.path.join(path, PetStatus.STANDING.value))
+    idle_frames = load_images_from_folder(os.path.join(path, PetStatus.IDLE.value))
+    dragging_frames = load_images_from_folder(os.path.join(path, PetStatus.DRAGGING.value))  # 加载 DRAGGING 动画帧
+    touching_head_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_HEAD.value))  # 加载 TOUCHES 动画帧
+    touching_body_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_BODY.value))  # 加载 TOUCHES 动画帧
+    # print(os.path.join(path, 'preview.png'))
     frame_index = 0
     clock = pygame.time.Clock()
 
@@ -64,7 +66,20 @@ def pet_run():
                 else:
                     context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)  # 顯示菜單
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # 左鍵按下
-                state_manager.set_status(PetStatus.TOUCHING)  
+                if not (context_menu and context_menu.visible):
+                    mouse_pos = event.pos
+                    pet_rect = pygame.Rect(
+                        pet.screen.get_width() // 2 - standing_frames[0].get_width() // 2,
+                        pet.screen.get_height() // 2 - standing_frames[0].get_height() // 2,
+                        standing_frames[0].get_width(),
+                        standing_frames[0].get_height(),
+                    )
+                    third_height = pet_rect.height * 0.4
+                    if mouse_pos[1] < pet_rect.top + third_height:  # 点击头部区域
+                        state_manager.set_status(PetStatus.TOUCHING_HEAD) 
+                    else: 
+                        state_manager.set_status(PetStatus.TOUCHING_BODY)
+                     
             # 检测鼠标拖拽事件
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # 中键按下
                 mouse_pos = event.pos
@@ -75,7 +90,6 @@ def pet_run():
                     standing_frames[0].get_width(),
                     standing_frames[0].get_height(),
                 )
-                
                 if pet_rect.collidepoint(mouse_pos):
                     state_manager.set_status(PetStatus.DRAGGING)
                     # 记录鼠标在窗口内的位置（相对于窗口左上角）
@@ -200,8 +214,10 @@ def pet_run():
             frames = idle_frames
         elif pet.status == PetStatus.DRAGGING:
             frames = dragging_frames  # 循環播放 DRAGGING 動畫
-        elif pet.status == PetStatus.TOUCHING:
-            frames = touches_frames  # 如果有其他狀態，需處理對應的幀序列
+        elif pet.status == PetStatus.TOUCHING_HEAD:
+            frames = touching_head_frames 
+        elif pet.status == PetStatus.TOUCHING_BODY:
+            frames = touching_body_frames
         else:
             frames = []  # 如果有其他狀態，需處理對應的幀序列
 
