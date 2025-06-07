@@ -5,7 +5,6 @@ from src.utils.contextmenu import ContextMenu
 from src.utils.state_manager import StateManager
 from src.utils.animation import Animation
 from src.utils.window_manager import WindowManager
-
 import pygame
 import os
 import win32gui
@@ -39,6 +38,7 @@ def pet_run():
     standing_frames = load_images_from_folder(r'assets\pet\image\Standing')
     idle_frames = load_images_from_folder(r'assets\pet\image\Idle')
     dragging_frames = load_images_from_folder(r'assets\pet\image\Dragging')  # 加载 DRAGGING 动画帧
+    touches_frames = load_images_from_folder(r'assets\pet\image\Touching')  # 加载 TOUCHES 动画帧
 
     frame_index = 0
     clock = pygame.time.Clock()
@@ -54,7 +54,6 @@ def pet_run():
     # 添加偏移量变量
     offset_x = 0
     offset_y = 0
-
     while running:
         for event in pygame.event.get():
             # 右键菜单显示/隐藏
@@ -64,7 +63,8 @@ def pet_run():
                     context_menu.visible = False  # 如果菜單已顯示，則隱藏
                 else:
                     context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)  # 顯示菜單
-
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # 左鍵按下
+                state_manager.set_status(PetStatus.TOUCHING)  
             # 检测鼠标拖拽事件
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:  # 中键按下
                 mouse_pos = event.pos
@@ -200,6 +200,8 @@ def pet_run():
             frames = idle_frames
         elif pet.status == PetStatus.DRAGGING:
             frames = dragging_frames  # 循環播放 DRAGGING 動畫
+        elif pet.status == PetStatus.TOUCHING:
+            frames = touches_frames  # 如果有其他狀態，需處理對應的幀序列
         else:
             frames = []  # 如果有其他狀態，需處理對應的幀序列
 

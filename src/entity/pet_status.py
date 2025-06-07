@@ -4,3 +4,4 @@ class PetStatus(Enum):
     STANDING = "standing"
     IDLE = "idle"
     DRAGGING = "dragging" 
+    TOUCHING = "touching"
