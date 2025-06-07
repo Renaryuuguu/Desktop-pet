@@ -224,7 +224,7 @@ def pet_run():
             pygame.display.flip()
 
             # 根据状态调整帧率
-            if state_manager.status == PetStatus.DRAGGING:
+            if state_manager.status == PetStatus.DRAGGING and PetStatus.STANDING:
                 clock.tick(high_fps)
             else:
                 clock.tick(normal_fps)
