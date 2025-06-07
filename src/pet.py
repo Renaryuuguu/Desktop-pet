@@ -59,7 +59,39 @@ def pet_run():
     offset_x = 0
     offset_y = 0
     while running:
-        # 拖拽状态下检测中键是否松开
+        # 检查是否应该开始拖拽 - 新增的直接状态检测
+        if state_manager.status != PetStatus.DRAGGING:
+            # 直接检测鼠标中键状态（不依赖pygame事件）
+            middle_button_state = win32api.GetKeyState(0x04)  # 0x04是鼠标中键
+            if middle_button_state < 0:  # 按钮已按下
+                # 获取屏幕坐标中的光标位置
+                mouse_abs = win32gui.GetCursorPos()
+                # 获取窗口位置
+                window_pos = win32gui.GetWindowRect(hwnd)
+                # 计算相对于窗口的位置
+                rel_x = mouse_abs[0] - window_pos[0]
+                rel_y = mouse_abs[1] - window_pos[1]
+                
+                # 检查光标是否在宠物上
+                pet_rect = pygame.Rect(
+                    pet.screen.get_width() // 2 - standing_frames[0].get_width() // 2,
+                    pet.screen.get_height() // 2 - standing_frames[0].get_height() // 2,
+                    standing_frames[0].get_width(),
+                    standing_frames[0].get_height(),
+                )
+                
+                if (0 <= rel_x < pet.screen.get_width() and 
+                    0 <= rel_y < pet.screen.get_height() and 
+                    pet_rect.collidepoint((rel_x, rel_y))):
+                    
+                    state_manager.set_status(PetStatus.DRAGGING)
+                    pet.is_dragging = True
+                    
+                    # 直接计算拖拽的偏移量
+                    offset_x = mouse_abs[0] - window_pos[0]
+                    offset_y = mouse_abs[1] - window_pos[1]
+                    
+        # 拖拽状态下检测中键是否松开 - 现有代码
         if state_manager.status == PetStatus.DRAGGING:
             # 直接检测鼠标中键状态（不依赖pygame事件）
             middle_button_state = win32api.GetKeyState(0x04)  # 0x04是鼠标中键
