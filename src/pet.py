@@ -10,6 +10,7 @@ import os
 import win32gui
 import win32con
 import random
+import win32api 
 
 
 class DesktopPet:
@@ -33,7 +34,7 @@ class DesktopPet:
 
 def pet_run():
     pet = DesktopPet()
-    hwnd = pygame.display.get_wm_info()["window"]  # Define hwnd once at the beginning
+    hwnd = pygame.display.get_wm_info()["window"]
     animation = Animation(pet.screen)
     state_manager = StateManager()
     running = True
@@ -58,9 +59,15 @@ def pet_run():
     offset_x = 0
     offset_y = 0
     while running:
-        # 处理拖拽状态（不依赖事件）
+        # 拖拽状态下检测中键是否松开
         if state_manager.status == PetStatus.DRAGGING:
-            # 直接获取鼠标位置（不依赖Pygame事件）
+            # 直接检测鼠标中键状态（不依赖pygame事件）
+            middle_button_state = win32api.GetKeyState(0x04)  # 0x04是鼠标中键
+            if middle_button_state >= 0:  # 按钮未按下
+                state_manager.set_status(PetStatus.STANDING)
+                pet.is_dragging = False
+                
+            # 直接处理鼠标位置（原有代码）
             current_screen_pos = win32gui.GetCursorPos()
             new_x = current_screen_pos[0] - offset_x
             new_y = current_screen_pos[1] - offset_y
