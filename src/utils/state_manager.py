@@ -24,4 +24,5 @@ class StateManager:
 
     def set_status(self, new_status):
         self.status = new_status
-        self.status_complete = False  # 重置為未完成
+        self.status_complete = False  # 重置为未完成
+        self.reset_idle_timer()  # 重置定时器

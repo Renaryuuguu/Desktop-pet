@@ -67,7 +67,7 @@ def pet_run():
     pet.start_middle_button_listener()
 
     # 帧率设置
-    high_fps = 30
+    high_fps = 45
     normal_fps = 6
 
     is_topmost = True
@@ -139,8 +139,10 @@ def pet_run():
                         third_height = pet_rect.height * 0.4
                         if mouse_pos[1] < pet_rect.top + third_height:  # 点击头部区域
                             state_manager.set_status(PetStatus.TOUCHING_HEAD)
+                            frame_index = 0  # 重置帧索引
                         else:
                             state_manager.set_status(PetStatus.TOUCHING_BODY)
+                            frame_index = 0  # 重置帧索引
 
                 # 主菜单事件
                 if context_menu and context_menu.visible:
