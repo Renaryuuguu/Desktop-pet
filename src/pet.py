@@ -12,6 +12,7 @@ import win32api
 import win32con
 import win32gui
 import time
+
 class DesktopPet:
     def __init__(self):
         pygame.init()
@@ -23,7 +24,7 @@ class DesktopPet:
         WindowManager.set_always_interactive(hwnd)  # 设置窗口始终可交互
         self.status = PetStatus.STANDING
 
-    def start_middle_button_listener(self):  # 修复缩进
+    def start_middle_button_listener(self):
         def listener():
             prev_state = win32api.GetKeyState(0x04)  # 中键状态
             while self.running:
@@ -35,7 +36,7 @@ class DesktopPet:
                     else:  # 中键释放
                         self.middle_button_released.set()
                     prev_state = current_state
-                time.sleep(0.01)  # 10ms检测间隔
+                time.sleep(0.01)  # 10毫秒检测间隔
         threading.Thread(target=listener, daemon=True).start()
 
 def get_pet_rect(screen, frame):
@@ -63,7 +64,7 @@ def pet_run():
     leave_sleeping_frames = load_images_from_folder(os.path.join(path, PetStatus.SLEEPING.value, "Leave_Sleeping"))
     frame_index = 0
     clock = pygame.time.Clock()
-    #jianting
+    # 监听中键
     pet.middle_button_pressed = threading.Event()
     pet.middle_button_released = threading.Event()
     pet.running = True
@@ -142,10 +143,10 @@ def pet_run():
                         third_height = pet_rect.height * 0.4
                         if mouse_pos[1] < pet_rect.top + third_height:  # 点击头部区域
                             state_manager.set_status(PetStatus.TOUCHING_HEAD)
-                            frame_index = 0  # 重置帧索引
+                            frame_index = 0
                         else:
                             state_manager.set_status(PetStatus.TOUCHING_BODY)
-                            frame_index = 0  # 重置帧索引
+                            frame_index = 0
 
                 # 主菜单事件
                 if context_menu and context_menu.visible:
@@ -167,7 +168,7 @@ def pet_run():
                         menu_x, menu_y = context_menu.position
                         status_menu_pos = (menu_x + context_menu.width + 10, menu_y)
                         status_menu = ContextMenu(pet.screen, get_status_menu_items(), status_menu_pos)
-                    continue
+                        context_menu.visible = True  # 保持主菜单可见
 
                 # 状态菜单事件
                 if status_menu and status_menu.visible:
@@ -217,7 +218,7 @@ def pet_run():
                 elif state_manager.sub_status == "leave":
                     frames = leave_sleeping_frames
                 else:
-                    state_manager.sub_status = "enter"  # Default to enter sleeping state
+                    state_manager.sub_status = "enter"
                     frame_index = 0
             else:
                 frames = []
@@ -227,17 +228,13 @@ def pet_run():
             # 更新帧索引
             if pet.status == PetStatus.SLEEPING:
                 if state_manager.sub_status == "enter" and frame_index >= len(enter_sleeping_frames) - 1:
-                    # Just finished enter animation, transitioning to loop
                     state_manager.sub_status = "loop"
-                    frame_index = 0  # Reset frame index for loop animation
+                    frame_index = 0
                 elif state_manager.sub_status == "leave" and frame_index >= len(leave_sleeping_frames) - 1:
-                    # Leave animation completed
                     state_manager.status_complete = True
                     frame_index = 0
-                # Normal frame updating when not at transition points
                 elif frame_index < len(frames) - 1:
                     frame_index += 1
-                # Only loop in "loop" sub-state
                 elif state_manager.sub_status == "loop":
                     frame_index = 0
             elif pet.status in [PetStatus.STANDING, PetStatus.DRAGGING]:
