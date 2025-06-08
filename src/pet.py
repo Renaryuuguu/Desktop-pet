@@ -153,6 +153,7 @@ def pet_run():
                     result = context_menu.handle_event(event)
                     if result == 'quit':
                         running = False
+                        status_menu = None
                     elif result == 'toggle_topmost':
                         hwnd = pygame.display.get_wm_info()["window"]
                         if is_topmost:
@@ -164,6 +165,7 @@ def pet_run():
                                                  win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
                             is_topmost = True
                         context_menu = None
+                        status_menu = None 
                     elif result == 'switch_status_menu':
                         menu_x, menu_y = context_menu.position
                         status_menu_pos = (menu_x + context_menu.width + 10, menu_y)
