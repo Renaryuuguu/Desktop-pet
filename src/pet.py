@@ -58,6 +58,9 @@ def pet_run():
     dragging_frames = load_images_from_folder(os.path.join(path, PetStatus.DRAGGING.value))
     touching_head_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_HEAD.value))
     touching_body_frames = load_images_from_folder(os.path.join(path, PetStatus.TOUCHING_BODY.value))
+    enter_sleeping_frames = load_images_from_folder(os.path.join(path, PetStatus.SLEEPING.value, "Enter_Sleeping"))
+    sleeping_frames = load_images_from_folder(os.path.join(path, PetStatus.SLEEPING.value, "Sleeping"))
+    leave_sleeping_frames = load_images_from_folder(os.path.join(path, PetStatus.SLEEPING.value, "Leave_Sleeping"))
     frame_index = 0
     clock = pygame.time.Clock()
     #jianting
@@ -171,13 +174,16 @@ def pet_run():
                     result = status_menu.handle_event(event)
                     if result == 'set_standing':
                         state_manager.set_status(PetStatus.STANDING)
-                        state_manager.reset_idle_timer()
                         frame_index = 0
                         status_menu = None
                         context_menu = None
                     elif result == 'set_idle':
                         state_manager.set_status(PetStatus.IDLE)
-                        state_manager.reset_idle_timer()
+                        frame_index = 0
+                        status_menu = None
+                        context_menu = None
+                    elif result == 'set_sleeping':
+                        state_manager.set_status(PetStatus.SLEEPING, sub_status="enter")
                         frame_index = 0
                         status_menu = None
                         context_menu = None
@@ -203,6 +209,22 @@ def pet_run():
                 frames = touching_head_frames
             elif pet.status == PetStatus.TOUCHING_BODY:
                 frames = touching_body_frames
+            elif pet.status == PetStatus.SLEEPING:
+                if state_manager.sub_status == "enter":
+                    frames = enter_sleeping_frames
+                    if frame_index >= len(frames) - 1:  # 进入睡觉动画播放完成
+                        state_manager.sub_status = "loop"
+                        frame_index = 0
+                elif state_manager.sub_status == "loop":
+                    frames = sleeping_frames
+                elif state_manager.sub_status == "leave":
+                    frames = leave_sleeping_frames
+                    if frame_index >= len(frames) - 1:  # 离开睡觉动画播放完成
+                        state_manager.status_complete = True
+                        frame_index = 0
+                else:
+                    state_manager.sub_status = "enter"  # 默认进入睡觉状态
+                    frame_index = 0
             else:
                 frames = []
 
@@ -210,6 +232,8 @@ def pet_run():
 
             # 更新帧索引
             if pet.status in [PetStatus.STANDING, PetStatus.DRAGGING]:
+                frame_index = (frame_index + 1) % len(frames)
+            elif pet.status == PetStatus.SLEEPING:  # 睡觉状态的帧更新逻辑
                 frame_index = (frame_index + 1) % len(frames)
             else:
                 frame_index += 1

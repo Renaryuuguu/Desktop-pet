@@ -6,4 +6,6 @@ class PetStatus(Enum):
     DRAGGING = "Dragging" 
     TOUCHING_HEAD = "Touching_head"
     TOUCHING_BODY = "Touching_body"
+    SLEEPING = "Sleeping"
+    
 
