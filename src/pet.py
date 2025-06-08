@@ -52,13 +52,16 @@ def pet_run():
     # Create a stop event for coordinating between threads
     stop_event = threading.Event()
     
-    # Initialize the tray icon
-    icon_path = os.path.join('assets', 'icon', 'tray_icon.ico')
-    tray_manager = TrayIconManager(stop_event, icon_path)
-    tray_manager.start()
-    
+    # Initialize the pet first to get the window handle
     pet = DesktopPet()
     hwnd = pygame.display.get_wm_info()["window"]
+    
+    # Initialize the tray icon with window handle
+    icon_path = os.path.join('assets', 'icon', 'tray_icon.ico')
+    tray_manager = TrayIconManager(stop_event, icon_path, hwnd)
+    tray_manager.start()
+    
+    # Initialize other components
     animation = Animation(pet.screen)
     state_manager = StateManager()
     running = True

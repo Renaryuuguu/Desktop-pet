@@ -24,3 +24,8 @@ class WindowManager:
         styles = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
         new_styles = styles | win32con.WS_EX_NOACTIVATE
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, new_styles)
+
+    @staticmethod
+    def bring_to_foreground(hwnd):
+        """Bring window to foreground without making it topmost"""
+        win32gui.SetForegroundWindow(hwnd)
