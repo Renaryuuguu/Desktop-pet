@@ -5,6 +5,7 @@ from src.utils.contextmenu import ContextMenu
 from src.utils.state_manager import StateManager
 from src.utils.animation import Animation
 from src.utils.window_manager import WindowManager
+from src.utils.tray_icon import TrayIconManager
 import pygame
 import os
 import threading
@@ -48,6 +49,14 @@ def get_pet_rect(screen, frame):
     )
 
 def pet_run():
+    # Create a stop event for coordinating between threads
+    stop_event = threading.Event()
+    
+    # Initialize the tray icon
+    icon_path = os.path.join('assets', 'icon', 'tray_icon.ico')
+    tray_manager = TrayIconManager(stop_event, icon_path)
+    tray_manager.start()
+    
     pet = DesktopPet()
     hwnd = pygame.display.get_wm_info()["window"]
     animation = Animation(pet.screen)
@@ -84,7 +93,7 @@ def pet_run():
     drag_offset_y = 0
     
     try:
-        while running:
+        while running and not stop_event.is_set():
             # 处理中键按下事件
             if pet.middle_button_pressed.is_set():
                 pet.middle_button_pressed.clear()
@@ -155,6 +164,7 @@ def pet_run():
                     result = context_menu.handle_event(event)
                     if result == 'quit':
                         running = False
+                        stop_event.set()  # Signal tray icon to exit too
                         status_menu = None
                     elif result == 'toggle_topmost':
                         hwnd = pygame.display.get_wm_info()["window"]
@@ -196,9 +206,11 @@ def pet_run():
 
                 if event.type == pygame.QUIT:
                     running = False
+                    stop_event.set()  # Signal tray icon to exit too
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         running = False
+                        stop_event.set()  # Signal tray icon to exit too
 
             # 状态定时切换
             pet.status = state_manager.update_status()
@@ -264,3 +276,5 @@ def pet_run():
                 clock.tick(normal_fps)
     finally:
         pet.running = False  # 停止监听线程
+        tray_manager.stop()  # Ensure tray icon is removed
+        pygame.quit()
