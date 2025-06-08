@@ -212,19 +212,12 @@ def pet_run():
             elif pet.status == PetStatus.SLEEPING:
                 if state_manager.sub_status == "enter":
                     frames = enter_sleeping_frames
-                    if frame_index >= len(frames) - 1:  # 进入睡觉动画播放完成
-                        state_manager.sub_status = "loop"
-                        frame_index = 0  # Reset frame index for new animation set
-                        frames = sleeping_frames  # Immediately use the new frames
                 elif state_manager.sub_status == "loop":
                     frames = sleeping_frames
                 elif state_manager.sub_status == "leave":
                     frames = leave_sleeping_frames
-                    if frame_index >= len(frames) - 1:  # 离开睡觉动画播放完成
-                        state_manager.status_complete = True
-                        frame_index = 0
                 else:
-                    state_manager.sub_status = "enter"  # 默认进入睡觉状态
+                    state_manager.sub_status = "enter"  # Default to enter sleeping state
                     frame_index = 0
             else:
                 frames = []
@@ -233,10 +226,18 @@ def pet_run():
 
             # 更新帧索引
             if pet.status == PetStatus.SLEEPING:
-                # Only increment if we won't overflow the current frame set
-                if frame_index < len(frames) - 1:
+                if state_manager.sub_status == "enter" and frame_index >= len(enter_sleeping_frames) - 1:
+                    # Just finished enter animation, transitioning to loop
+                    state_manager.sub_status = "loop"
+                    frame_index = 0  # Reset frame index for loop animation
+                elif state_manager.sub_status == "leave" and frame_index >= len(leave_sleeping_frames) - 1:
+                    # Leave animation completed
+                    state_manager.status_complete = True
+                    frame_index = 0
+                # Normal frame updating when not at transition points
+                elif frame_index < len(frames) - 1:
                     frame_index += 1
-                # Only loop if we're in the "loop" sub-state
+                # Only loop in "loop" sub-state
                 elif state_manager.sub_status == "loop":
                     frame_index = 0
             elif pet.status in [PetStatus.STANDING, PetStatus.DRAGGING]:
