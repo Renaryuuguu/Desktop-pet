@@ -214,7 +214,8 @@ def pet_run():
                     frames = enter_sleeping_frames
                     if frame_index >= len(frames) - 1:  # 进入睡觉动画播放完成
                         state_manager.sub_status = "loop"
-                        frame_index = 0
+                        frame_index = 0  # Reset frame index for new animation set
+                        frames = sleeping_frames  # Immediately use the new frames
                 elif state_manager.sub_status == "loop":
                     frames = sleeping_frames
                 elif state_manager.sub_status == "leave":
@@ -231,9 +232,14 @@ def pet_run():
             animation.play_frame(frames, frame_index, is_dragging)
 
             # 更新帧索引
-            if pet.status in [PetStatus.STANDING, PetStatus.DRAGGING]:
-                frame_index = (frame_index + 1) % len(frames)
-            elif pet.status == PetStatus.SLEEPING:  # 睡觉状态的帧更新逻辑
+            if pet.status == PetStatus.SLEEPING:
+                # Only increment if we won't overflow the current frame set
+                if frame_index < len(frames) - 1:
+                    frame_index += 1
+                # Only loop if we're in the "loop" sub-state
+                elif state_manager.sub_status == "loop":
+                    frame_index = 0
+            elif pet.status in [PetStatus.STANDING, PetStatus.DRAGGING]:
                 frame_index = (frame_index + 1) % len(frames)
             else:
                 frame_index += 1
