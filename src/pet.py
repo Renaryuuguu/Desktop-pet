@@ -132,7 +132,9 @@ def pet_run():
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                     mouse_pos = pygame.mouse.get_pos()
                     if context_menu and context_menu.visible:
-                        context_menu.visible = False  # 隐藏菜单
+                        context_menu.visible = False  
+                        if status_menu and status_menu.visible:
+                            status_menu.visible = False
                     else:
                         context_menu = ContextMenu(pet.screen, get_menu_items(is_topmost), mouse_pos)  # 显示菜单
                         
