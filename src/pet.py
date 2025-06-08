@@ -17,30 +17,32 @@ import time
 class DesktopPet:
     def __init__(self):
         pygame.init()
-        pygame.display.set_caption("Desktop Pet")
+        pygame.display.set_caption("桌面宠物")
         self.screen = pygame.display.set_mode((500, 500), pygame.NOFRAME | pygame.SRCALPHA)
         hwnd = pygame.display.get_wm_info()["window"]
-        WindowManager.set_transparent(hwnd)
-        WindowManager.set_topmost(hwnd)
+        WindowManager.set_transparent(hwnd)  # 设置窗口透明
+        WindowManager.set_topmost(hwnd)  # 设置窗口置顶
         WindowManager.set_always_interactive(hwnd)  # 设置窗口始终可交互
-        self.status = PetStatus.STANDING
+        self.status = PetStatus.STANDING  # 初始化宠物状态为站立
 
     def start_middle_button_listener(self):
+        # 启动监听中键按下和释放的线程
         def listener():
-            prev_state = win32api.GetKeyState(0x04)  # 中键状态
+            prev_state = win32api.GetKeyState(0x04)  # 获取中键初始状态
             while self.running:
                 current_state = win32api.GetKeyState(0x04)
-                # 检测中键按下事件
+                # 检测中键状态变化
                 if current_state != prev_state:
                     if current_state < 0:  # 中键按下
                         self.middle_button_pressed.set()
                     else:  # 中键释放
                         self.middle_button_released.set()
                     prev_state = current_state
-                time.sleep(0.01)  # 10毫秒检测间隔
+                time.sleep(0.01)  # 每10毫秒检测一次
         threading.Thread(target=listener, daemon=True).start()
 
 def get_pet_rect(screen, frame):
+    # 获取宠物的矩形区域
     return pygame.Rect(
         screen.get_width() // 2 - frame.get_width() // 2,
         screen.get_height() // 2 - frame.get_height() // 2,
@@ -49,19 +51,19 @@ def get_pet_rect(screen, frame):
     )
 
 def pet_run():
-    # Create a stop event for coordinating between threads
+    # 创建一个停止事件，用于线程间协调
     stop_event = threading.Event()
     
-    # Initialize the pet first to get the window handle
+    # 初始化宠物以获取窗口句柄
     pet = DesktopPet()
     hwnd = pygame.display.get_wm_info()["window"]
     
-    # Initialize the tray icon with window handle
+    # 初始化托盘图标管理器
     icon_path = os.path.join('assets', 'icon', 'tray_icon.ico')
     tray_manager = TrayIconManager(stop_event, icon_path, hwnd)
     tray_manager.start()
     
-    # Initialize other components
+    # 初始化其他组件
     animation = Animation(pet.screen)
     state_manager = StateManager()
     running = True
@@ -83,12 +85,12 @@ def pet_run():
     pet.start_middle_button_listener()
 
     # 帧率设置
-    high_fps = 45
-    normal_fps = 6
+    high_fps = 45  # 高帧率
+    normal_fps = 6  # 普通帧率
 
-    is_topmost = True
-    context_menu = None
-    status_menu = None
+    is_topmost = True  # 是否置顶
+    context_menu = None  # 主菜单
+    status_menu = None  # 状态菜单
 
     # 拖拽状态变量
     is_dragging = False
@@ -112,7 +114,7 @@ def pet_run():
                 pet_rect = get_pet_rect(pet.screen, standing_frames[0])
                 if pet_rect.collidepoint((rel_x, rel_y)):
                     is_dragging = True
-                    state_manager.set_status(PetStatus.DRAGGING)
+                    state_manager.set_status(PetStatus.DRAGGING)  # 设置状态为拖拽
                     drag_offset_x = rel_x
                     drag_offset_y = rel_y
                     
@@ -125,7 +127,7 @@ def pet_run():
                 pet.middle_button_released.clear()
                 if is_dragging:
                     is_dragging = False
-                    state_manager.set_status(PetStatus.STANDING)
+                    state_manager.set_status(PetStatus.STANDING)  # 设置状态为站立
             
             # 处理拖拽移动
             if is_dragging:
@@ -156,10 +158,10 @@ def pet_run():
                         pet_rect = get_pet_rect(pet.screen, standing_frames[0])
                         third_height = pet_rect.height * 0.4
                         if mouse_pos[1] < pet_rect.top + third_height:  # 点击头部区域
-                            state_manager.set_status(PetStatus.TOUCHING_HEAD)
+                            state_manager.set_status(PetStatus.TOUCHING_HEAD)  # 设置状态为触摸头部
                             frame_index = 0
                         else:
-                            state_manager.set_status(PetStatus.TOUCHING_BODY)
+                            state_manager.set_status(PetStatus.TOUCHING_BODY)  # 设置状态为触摸身体
                             frame_index = 0
 
                 # 主菜单事件
@@ -167,7 +169,7 @@ def pet_run():
                     result = context_menu.handle_event(event)
                     if result == 'quit':
                         running = False
-                        stop_event.set()  # Signal tray icon to exit too
+                        stop_event.set()  # 通知托盘图标退出
                         status_menu = None
                     elif result == 'toggle_topmost':
                         hwnd = pygame.display.get_wm_info()["window"]
@@ -191,17 +193,17 @@ def pet_run():
                 if status_menu and status_menu.visible:
                     result = status_menu.handle_event(event)
                     if result == 'set_standing':
-                        state_manager.set_status(PetStatus.STANDING)
+                        state_manager.set_status(PetStatus.STANDING)  # 设置状态为站立
                         frame_index = 0
                         status_menu = None
                         context_menu = None
                     elif result == 'set_idle':
-                        state_manager.set_status(PetStatus.IDLE)
+                        state_manager.set_status(PetStatus.IDLE)  # 设置状态为闲置
                         frame_index = 0
                         status_menu = None
                         context_menu = None
                     elif result == 'set_sleeping':
-                        state_manager.set_status(PetStatus.SLEEPING, sub_status="enter")
+                        state_manager.set_status(PetStatus.SLEEPING, sub_status="enter")  # 设置状态为睡眠
                         frame_index = 0
                         status_menu = None
                         context_menu = None
@@ -209,11 +211,11 @@ def pet_run():
 
                 if event.type == pygame.QUIT:
                     running = False
-                    stop_event.set()  # Signal tray icon to exit too
+                    stop_event.set()  # 通知托盘图标退出
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         running = False
-                        stop_event.set()  # Signal tray icon to exit too
+                        stop_event.set()  # 通知托盘图标退出
 
             # 状态定时切换
             pet.status = state_manager.update_status()
@@ -279,5 +281,5 @@ def pet_run():
                 clock.tick(normal_fps)
     finally:
         pet.running = False  # 停止监听线程
-        tray_manager.stop()  # Ensure tray icon is removed
+        tray_manager.stop()  # 确保托盘图标被移除
         pygame.quit()

@@ -27,5 +27,4 @@ class WindowManager:
 
     @staticmethod
     def bring_to_foreground(hwnd):
-        """Bring window to foreground without making it topmost"""
         win32gui.SetForegroundWindow(hwnd)
